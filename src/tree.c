@@ -484,12 +484,7 @@ static void mark_unmapped(Con *con) {
     }
 }
 
-/*
- * Renders the tree, that is rendering all outputs using render_con() and
- * pushing the changes to X11 using x_push_changes().
- *
- */
-void tree_render(void) {
+void _tree_render(void) {
     if (croot == NULL)
         return;
 
@@ -503,6 +498,56 @@ void tree_render(void) {
 
     x_push_changes(croot);
     DLOG("-- END RENDERING --\n");
+}
+
+
+pthread_mutex_t tree_render_lock;
+pthread_t tree_render_tid;
+int need_update;
+void* tree_render_thread(void* arg) {
+    pthread_mutex_lock(&tree_render_lock);
+    while (1) {
+        int err = pthread_mutex_lock(&tree_render_lock);
+        DLOG("-- THREAD RENDER\n");
+        if (err) {
+            DLOG("-- mutex lock error: CLOSING RENDER THREAD\n");
+            break;
+        }
+        while(need_update) {
+            need_update = 0;
+            DLOG("-- THREAD RENDER - update\n");
+            _tree_render();
+        }
+    }
+    return NULL;
+}
+
+void tree_init_thread() {
+    if (pthread_mutex_init(&tree_render_lock, NULL) != 0) {
+        ELOG("ERROR: mutex init failed\n");
+    }
+    if (pthread_create(&(tree_render_tid), NULL, &tree_render_thread, NULL) != 0) {
+        ELOG("ERROR: thread create failed\n");
+    }
+}
+
+void tree_destroy_thread() {
+    pthread_mutex_destroy(&tree_render_lock);
+}
+
+/*
+ * Renders the tree, that is rendering all outputs using render_con() and
+ * pushing the changes to X11 using x_push_changes().
+ *
+ */
+void tree_render(void) {
+    DLOG("-- THREAD RENDER UNLOCK\n");
+    if (pthread_mutex_trylock(&tree_render_lock)) {
+        need_update = 1;
+        pthread_mutex_unlock(&tree_render_lock);
+    } else {
+        need_update = 1;
+    }
 }
 
 /*

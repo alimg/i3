@@ -171,6 +171,8 @@ static void i3_exit(void) {
         fflush(stderr);
         shm_unlink(shmlogname);
     }
+
+    tree_destroy_thread();
 }
 
 /*
@@ -459,6 +461,10 @@ int main(int argc, char *argv[]) {
 
     LOG("i3 %s starting\n", i3_version);
 
+    if (pthread_mutex_init(&_x_push_changes_lock, NULL) != 0) {
+        ELOG("ERROR: mutex init failed\n");
+    }
+
     conn = xcb_connect(NULL, &conn_screen);
     if (xcb_connection_has_error(conn))
         errx(EXIT_FAILURE, "Cannot open display\n");
@@ -637,6 +643,8 @@ int main(int argc, char *argv[]) {
     }
     if (needs_tree_init)
         tree_init(greply);
+
+    tree_init_thread();
 
     free(greply);
 

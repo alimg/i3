@@ -49,6 +49,8 @@ bool level_up(void);
  */
 bool level_down(void);
 
+void tree_init_thread(void);
+void tree_destroy_thread(void);
 /**
  * Renders the tree, that is rendering all outputs using render_con() and
  * pushing the changes to X11 using x_push_changes().

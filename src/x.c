@@ -29,6 +29,8 @@ static xcb_window_t last_focused = XCB_NONE;
 /* Stores coordinates to warp mouse pointer to if set */
 static Rect *warp_to;
 
+pthread_mutex_t _x_push_changes_lock;
+
 /*
  * Describes the X11 state we may modify (map state, position, window stack).
  * There is one entry per container. The state represents the current situation
@@ -982,6 +984,10 @@ static bool is_con_attached(Con *con) {
  *
  */
 void x_push_changes(Con *con) {
+    if (pthread_mutex_lock(&_x_push_changes_lock) != 0) {
+        ELOG("mutex lock error");
+        return;
+    }
     con_state *state;
     xcb_query_pointer_cookie_t pointercookie;
 
@@ -1183,6 +1189,10 @@ void x_push_changes(Con *con) {
     //}
 
     xcb_flush(conn);
+    if (pthread_mutex_unlock(&_x_push_changes_lock) != 0) {
+        ELOG("mutex unlock error");
+        return;
+    }
 }
 
 /*
