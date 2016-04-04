@@ -571,10 +571,9 @@ DRAGGING_CB(resize_window_callback) {
     con->rect.x = dest_x;
     con->rect.y = dest_y;
 
-    /* TODO: don’t re-render the whole tree just because we change
-     * coordinates of a floating window */
-    tree_render();
-    x_push_changes(croot);
+    /* Render changed container */
+    render_con(con, false);
+    x_push_changes(con);
 }
 
 /*
